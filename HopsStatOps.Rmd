@@ -1,0 +1,99 @@
+---
+title: "Hops Sales Statistics with Python and R Markdown"
+output: html_notebook
+---
+#load python and pandas
+```{r}
+library(reticulate)
+py_install('pandas')
+```
+#load data
+```{r echo=TRUE}
+sales <- read.csv('sales.csv')
+```
+#pass through the data, add sales of same items together to find totals then find their equivalent in ounces
+```{python}
+import pandas as pd
+salesdf = pd.DataFrame(r.sales)
+
+hopsdf2 = salesdf.query('Category == "Hops"')
+hopsdf3 = hopsdf2.sort_values('SKU')
+
+skulist = []
+skulist.extend(hopsdf3.get('SKU'))
+namelist = []
+namelist.extend(hopsdf3.get('Item.Name'))
+variationlist = []
+variationlist.extend(hopsdf3.get('Item.Variation'))
+saleslist = []
+saleslist.extend(hopsdf3.get('Items.Sold'))
+salestotals = []
+salestotals.extend(hopsdf3.get('Gross.Sales'))
+
+i = 0
+j = 1
+while i < len(skulist):
+  if skulist[i] == skulist[j]:
+    saleslist[i] += saleslist[j]
+    salestotals[i] += salestotals[j]
+    variationlist.pop(j)
+    skulist.pop(j)
+    namelist.pop(j)
+    saleslist.pop(j)
+    salestotals.pop(j)
+  i += 1
+  j += 1
+
+weight =[]
+
+for x in skulist:
+  if  "lb" in x:
+    if "1" in x:
+      weight.append(16)
+    elif "2" in x:
+      weight.append(32)
+    else:
+      weight.append(0)
+  elif "1" in x:
+    weight.append(1)
+  elif "2" in x:
+    weight.append(2)
+  else:
+    weight.append(0)
+
+a = 0
+b = 0
+c = 0
+totalweight = []
+i = 0
+for x in weight:
+  a = weight[i]
+  b = saleslist[i]
+  c = a*b
+  totalweight.append(c)
+  i += 1
+
+
+data = {
+  'sku':skulist,
+  'hops':namelist,
+  'soldOunces':totalweight
+}
+hopsdf4 = pd.DataFrame(data)
+
+hopsdf5 = hopsdf4.query('soldOunces > 0')
+hopsdf5
+```
+#save data as csv
+```{r}
+library(reticulate)
+write.csv(py$hopsdf5,"hopsweightsales.csv")
+```
+#plot data
+```{r}
+library(ggplot2)
+hopsplot <- ggplot(py$hopsdf5, aes(x = hops, y = soldOunces))+geom_col(fill='purple')+ggtitle("Total Hops Sales by Ounces")+guides(x=guide_axis(angle=90))
+hopsplot
+hops <- py$hopsdf5
+```
+

@@ -1,0 +1,134 @@
+---
+title: "Grain Sales Statistics with Python and R Markdown"
+output: html_notebook
+---
+
+```{r}
+library(reticulate)
+py_install('pandas')
+```
+
+```{r}
+sales <- read.csv('sales.csv')
+```
+
+```{python}
+import pandas as pd
+graindf = pd.DataFrame(r.sales)
+
+graindf2 = graindf.query('Category == "All Brewing Grains"')
+graindf3 = graindf2.sort_values('SKU')
+
+skulist = []
+skulist.extend(graindf3.get('SKU'))
+namelist = []
+namelist.extend(graindf3.get('Item.Name'))
+variationlist = []
+variationlist.extend(graindf3.get('Item.Variation'))
+saleslist = []
+saleslist.extend(graindf3.get('Items.Sold'))
+salestotals = []
+salestotals.extend(graindf3.get('Gross.Sales'))
+
+i = 0
+j = 1
+while i < len(skulist):
+  if skulist[i] == skulist[j]:
+    saleslist[i] += saleslist[j]
+    salestotals[i] += salestotals[j]
+    variationlist.pop(j)
+    skulist.pop(j)
+    namelist.pop(j)
+    saleslist.pop(j)
+    salestotals.pop(j)
+  i += 1
+  j += 1
+
+sku = []
+weight =[]
+
+for x in skulist:
+  if "Regular" not in x:
+    txt = x
+    y = txt.partition("-")
+    sku.append(y[0])
+    weight.append(y[2])
+  else:
+    sku.append(x[0])
+    weight.append(0)
+
+
+len(sku)
+
+txt = 0
+x = 0
+y = 0
+grainweight = []
+for x in weight:
+  if "oz" in x:
+    grainweight.append(1)
+  elif "lb" in x:
+    if len(x) == 4:
+      txt = x.partition("l")
+      y = int(txt[0])
+      z = y*16
+      grainweight.append(z)
+    else:
+      grainweight.append(16)
+  else:
+    grainweight.append(0)
+
+len(sku)
+len(saleslist)
+len(grainweight)
+
+a = 0
+b = 0
+c = 0
+totalweight = []
+i = 0
+for x in grainweight:
+  a = grainweight[i]
+  b = saleslist[i]
+  c = a*b
+  totalweight.append(c)
+  i += 1
+
+i = 0
+j = 1
+while i < len(sku):
+  if sku[i] == sku[j]:
+    totalweight[i] += totalweight[j]
+    namelist.pop(j)
+    sku.pop(j)
+    totalweight.pop(j)
+  i += 1
+  j += 1
+
+len(namelist)
+len(totalweight)
+len(sku)
+
+data = {
+  'sku':sku,
+  'grain':namelist,
+  'soldOunces':totalweight
+}
+graindf4 = pd.DataFrame(data)
+
+graindf5 = graindf4.query('soldOunces > 0')
+
+```
+```{r}
+library(reticulate)
+write.csv(py$graindf5,file="salesinOunces.csv")
+```
+
+```{r}
+library(reticulate)
+library(ggplot2)
+grainplot <- ggplot(py$graindf5, aes(x = grain, y = soldOunces))+geom_col(fill='lightgreen')+ggtitle("Total Grain Sales by Ounces")+guides(x=guide_axis(angle=90))
+grainplot
+grains <- py$graindf5
+```
+
